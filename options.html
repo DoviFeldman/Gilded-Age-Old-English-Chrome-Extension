@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Gilded Age Rewriter - Options</title>
+<style>
+  body {
+    font-family: Georgia, serif;
+    max-width: 720px;
+    margin: 30px auto;
+    padding: 20px;
+    background: #faf6ed;
+    color: #2b2416;
+  }
+  h1 {
+    font-size: 28px;
+    border-bottom: 3px solid #d4af37;
+    padding-bottom: 10px;
+    color: #1a1a2e;
+  }
+  h2 { color: #5a4a2f; margin-top: 30px; font-size:18px; }
+  .card {
+    background: white;
+    border: 1px solid #e8dcc0;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  }
+  label { display:block; font-weight:bold; margin:12px 0 4px; font-size:13px; }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbbfa0;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 13px;
+    background: #fffef9;
+  }
+  textarea { font-family: sans-serif; min-height: 120px; }
+  .hint {
+    font-size:11px;
+    color:#7a6a4e;
+    margin-top:4px;
+    line-height:1.4;
+  }
+  .success {
+    background:#e6f5e6;
+    border:1px solid #8bc48b;
+    color:#2a5a2a;
+    padding:10px;
+    border-radius:6px;
+    display:none;
+    margin:10px 0;
+  }
+  .btn {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: #ffd700;
+    border: 2px solid #d4af37;
+    padding: 10px 22px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-family: Georgia, serif;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  .btn:hover { filter:brightness(1.2); transform:scale(1.02); }
+  .badge {
+    display:inline-block;
+    background:#d4af37;
+    color:#000;
+    font-family:sans-serif;
+    font-size:10px;
+    padding:2px 8px;
+    border-radius:10px;
+    font-weight:bold;
+    margin-left:8px;
+  }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  code { background:#f0e8d0; padding:2px 5px; border-radius:3px; font-size:12px; }
+</style>
+</head>
+<body>
+<h1> Gilded Age Rewriter — Settings <span class="badge">LOCAL ONLY</span></h1>
+<p style="color:#6b5d44">Runs fully locally in your browser. No external server. Your API key is stored in <code>chrome.storage.sync</code> — remembered across your whole browser profile and does not get deleted on clear-cache.</p>
+
+<div id="saved" class="success"> Settings saved! Your key is synced across your browser.</div>
+
+<div class="card">
+  <h2>⚡ Super Fast AI API (Groq / Cerebras)</h2>
+  <p class="hint"><b>Thinking is shut OFF</b> by default for maximum speed. No <code>&lt;think&gt;</code>, no chain-of-thought. Optimized for Groq & Cerebras inference.</p>
+
+  <label>API Base URL (OpenAI-compatible)</label>
+  <input type="text" id="apiBaseUrl" placeholder="https://api.groq.com/openai/v1/chat/completions">
+  <div class="hint">
+    Groq: <code>https://api.groq.com/openai/v1/chat/completions</code><br>
+    Cerebras: <code>https://api.cerebras.ai/v1/chat/completions</code>
+  </div>
+
+  <label>Model</label>
+  <input type="text" id="model" placeholder="llama-3.3-70b-versatile">
+  <div class="hint">
+    Recommended FAST models:<br>
+    Groq: <code>llama-3.1-8b-instant</code> (fastest), <code>llama-3.3-70b-versatile</code> (best quality)<br>
+    Cerebras: <code>llama3.1-8b</code>, <code>llama-3.3-70b</code>
+  </div>
+
+  <label>API Key (stored in chrome.storage.sync - persists across browser)</label>
+  <input type="password" id="apiKey" placeholder="gsk_... or csk_...">
+  <div class="hint">🔒 Saved via <code>chrome.storage.sync</code>. Syncs to all Chrome instances logged into your Google account. Not deleted when clearing site data. Show key? <a href="#" id="toggleKey">Show</a></div>
+
+  <label style="margin-top:16px"><input type="checkbox" id="showKeyInLogs"> Debug: log API responses (uncheck for privacy)</label>
+</div>
+
+<div class="card">
+  <h2> Conversion Behavior — Save Tokens</h2>
+  <div class="grid">
+    <div>
+      <label>Startup Mode</label>
+      <select id="startupMode">
+        <option value="manual">Manual — Top-right popup + Hotkey</option>
+        <option value="auto_viewport">Automatic — Viewport only (SAVES TOKENS)</option>
+        <option value="auto_all">Automatic — Whole page immediately</option>
+      </select>
+      <div class="hint">
+        <b>Manual:</b> Extension does nothing until you click the 🎩 button or press hotkey.<br>
+        <b>Viewport Sipper:</b> Only converts text you actually look at. 70% fewer tokens.<br>
+        <b>Auto All:</b> Converts entire page on load.
+      </div>
+    </div>
+    <div>
+      <label>Hotkey</label>
+      <input type="text" value="Ctrl+Shift+G / Cmd+Shift+G" disabled>
+      <div class="hint">Press <code>Ctrl+Shift+G</code> anywhere to toggle rewrite/restore. You can change this in <code>chrome://extensions/shortcuts</code></div>
+      <label style="margin-top:12px"><input type="checkbox" id="floatingButton"> Show floating 🎩 button in top-right corner</label>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2> Excluded Websites</h2>
+  <label>One domain per line (supports * wildcards)</label>
+  <textarea id="excludedSites" placeholder="mail.google.com
+banking.example.com
+*.google.com
+localhost"></textarea>
+  <div class="hint">Pages matching these domains will never be rewritten, even in auto mode. Useful to exclude Gmail, banking, docs, etc. Your list is synced via chrome.storage.sync.</div>
+</div>
+
+<div class="card" style="background:#1a1a2e; color:#f5e6c8;">
+  <h2 style="color:#ffd700; margin-top:0;"> About Gilded Age Mode</h2>
+  <p style="font-size:13px; line-height:1.6; color:#c9b896">
+    Transforms modern web text into ornate 1880s Gilded Age English — as if Edith Wharton and Mark Twain were narrating the internet. 
+    Elaborate, opulent, high-society parlors, "I daresay", "most esteemed patronage", yet faithful to original meaning.<br><br>
+    <b>How it works locally:</b> Content script extracts only visible text nodes (never passwords/inputs). Background service worker sends tiny JSON batches (10 phrases) to your Groq/Cerebras API. Thinking is forced off → sub-200ms response. Original text is kept in memory to restore instantly.<br><br>
+    <b>Token saving:</b> Viewport Sipper mode + IntersectionObserver only converts what scrolls into view.
+  </p>
+</div>
+
+<button class="btn" id="saveBtn"> Save Settings Across Browser</button>
+<span style="font-size:11px;color:#888;margin-left:12px;">Stored in chrome.storage.sync — persists unless extension uninstall</span>
+
+<script src="options.js"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2601c223d170d03',t:'MTc4NTg3MzIyNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
