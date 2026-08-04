@@ -16,6 +16,43 @@ async function getConfig() {
   return { ...DEFAULT_CONFIG, ...stored };
 }
 
+// Only *reasoning* models accept reasoning_effort / reasoning_format, and the
+// accepted values differ per family. Sending them to a normal model (or sending
+// a value the model doesn't know, like "disable") is a hard 400.
+function reasoningParamsFor(model) {
+  const m = (model || "").toLowerCase();
+
+  // Groq gpt-oss: low | medium | high  (cannot be turned off, so ask for the cheapest)
+  if (m.includes("gpt-oss")) {
+    return { reasoning_effort: "low", reasoning_format: "hidden" };
+  }
+  // Groq qwen3: none | default  ("none" actually disables thinking)
+  if (m.includes("qwen3") || m.includes("qwen-3")) {
+    return { reasoning_effort: "none", reasoning_format: "hidden" };
+  }
+  // deepseek-r1 distills etc: no effort switch, but the trace can be hidden
+  if (m.includes("r1") || m.includes("deepseek") || m.includes("reason") || m.includes("thinking")) {
+    return { reasoning_format: "hidden" };
+  }
+  // llama-3.x, kimi, etc. are not reasoning models: send nothing.
+  return {};
+}
+
+// Pull the offending field name out of an OpenAI-compatible 400 body so we can
+// retry without it instead of failing the whole batch.
+function offendingParam(errText) {
+  const known = ["reasoning_effort", "reasoning_format", "parallel_tool_calls", "max_tokens"];
+  let body;
+  try { body = JSON.parse(errText); } catch { body = null; }
+  const param = body?.error?.param || body?.error?.failed_generation_param;
+  if (typeof param === "string") {
+    const hit = known.find(k => param.includes(k));
+    if (hit) return hit;
+  }
+  const msg = (body?.error?.message || errText || "").toLowerCase();
+  return known.find(k => msg.includes(k)) || null;
+}
+
 // Optimized for Groq & Cerebras - thinking disabled
 async function callFastAPI(texts) {
   const config = await getConfig();
@@ -50,27 +87,42 @@ Input: ${JSON.stringify(texts)}`;
     ],
     temperature: 0.7,
     max_tokens: 4000,
-    // Params to disable thinking on various providers
-    reasoning_effort: "disable",
-    reasoning_format: "hidden",
-    // Groq specific
-    // @ts-ignore
-    parallel_tool_calls: false
+    // Only sent when the configured model actually supports them.
+    ...reasoningParamsFor(config.model)
   };
 
-  // Cerebras / Groq both support OpenAI-compatible chat completions
-  const res = await fetch(config.apiBaseUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${config.apiKey}`
-    },
-    body: JSON.stringify(body)
-  });
+  // Cerebras / Groq both support OpenAI-compatible chat completions.
+  // If the provider rejects an optional param with a 400, drop it and retry.
+  let res, errText;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    res = await fetch(config.apiBaseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (res.ok) break;
+
+    errText = await res.text();
+    if (res.status !== 400) break;
+
+    const bad = offendingParam(errText);
+    if (!bad || !(bad in body) || bad === "max_tokens") break;
+    console.warn(`Provider rejected "${bad}" for model ${config.model} — retrying without it.`);
+    delete body[bad];
+  }
 
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`API Error ${res.status}: ${errText.slice(0,500)}`);
+    if (res.status === 400) {
+      throw new Error(`API Error 400: your provider rejected the request for model "${config.model}". Check the model name in options — the recommended fast models are llama-3.1-8b-instant / llama-3.3-70b-versatile (Groq) or llama3.1-8b (Cerebras). Details: ${(errText || "").slice(0,300)}`);
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(`API Error ${res.status}: your API key was rejected. Re-check the key and base URL in extension options.`);
+    }
+    throw new Error(`API Error ${res.status}: ${(errText || "").slice(0,500)}`);
   }
 
   const data = await res.json();

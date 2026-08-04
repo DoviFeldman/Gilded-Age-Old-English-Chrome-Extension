@@ -14,7 +14,7 @@ Automatic whole-page: Converts as soon as you visit.
 Top-right popup + Hotkey: Manual. Extension shows as a floating 🎩 pill in top-right. Press Ctrl+Shift+G / Cmd+Shift+G to toggle.
 Viewport Sipper (Recommended): Only converts text currently in view / that you scroll to. Saves ~70% tokens — doesn't waste tokens if you don't read whole site.
 Optimized for Fast APIs:
-System prompt explicitly says Thinking shut off, reasoning_effort: disable
+System prompt explicitly says Thinking shut off. Reasoning params (reasoning_effort / reasoning_format) are sent only to models that actually support them, with per-family valid values (e.g. "none" for qwen3, "low" for gpt-oss) — non-reasoning models like llama-3.3-70b get none, and any param a provider rejects with a 400 is dropped and the request retried.
 Batches 10 phrases in one JSON call
 Works with Groq https://api.groq.com/openai/v1/chat/completions and Cerebras https://api.cerebras.ai/v1/chat/completions
 Install (Developer Mode)
